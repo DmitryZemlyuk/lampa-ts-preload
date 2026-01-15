@@ -7,6 +7,7 @@
     let originalPlay = null;
     let modal = null;
     let network = null;
+    let playData = null;
 
     /* =========================
        LANG
@@ -32,8 +33,7 @@
         field: {
             name: 'Предзагрузка TorrServer',
             description: 'Показывать окно предзагрузки перед стартом видео'
-        },
-        onChange: () => {}
+        }
     });
 
     /* =========================
@@ -70,58 +70,78 @@
 
         return {
             base: m[1],
-            stream: m[2],
             args,
             clean: m[1] + m[2] + '?' + qs
         };
     }
 
     /* =========================
-       MODAL (NEW API)
+       MODAL (STABLE)
     ========================= */
 
-    function openModal() {
-        const html = $(`
-            <div class="broadcast__text">
-                <div class="js-peer"></div>
-                <div class="js-buff"></div>
-                <div class="js-speed"></div>
-            </div>
-        `);
-
-        modal = new Lampa.Modal({
-            title: Lampa.Lang.translate('ts_preload_title'),
-            content: html,
-            size: 'medium',
-            buttons: [
-                {
-                    name: Lampa.Lang.translate('cancel'),
-                    onSelect: cancel
-                },
-                {
-                    name: Lampa.Lang.translate('player_lauch'),
-                    onSelect: play
-                }
-            ]
+    function openModal(content, onBack) {
+        const html = Lampa.Template.get('modal', {
+            title: Lampa.Lang.translate('ts_preload_title')
         });
 
-        modal.show();
+        const scroll = new Lampa.Scroll({ over: true });
+        html.find('.modal__body').append(scroll.render());
+        scroll.append(content);
 
-        return html;
+        const footer = $('<div class="modal__footer"></div>');
+
+        [
+            {
+                name: Lampa.Lang.translate('cancel'),
+                action: cancel
+            },
+            {
+                name: Lampa.Lang.translate('player_lauch'),
+                action: play
+            }
+        ].forEach(btn => {
+            const el = $('<div class="modal__button selector"></div>');
+            el.text(btn.name);
+            el.on('click hover:enter', btn.action);
+            footer.append(el);
+        });
+
+        scroll.append(footer);
+        $('body').append(html);
+
+        Lampa.Controller.add('ts-preload-modal', {
+            invisible: true,
+            toggle() {
+                Lampa.Controller.collectionSet(scroll.render());
+                Lampa.Controller.collectionFocus(
+                    scroll.render().find('.selector').eq(0)
+                );
+                Lampa.Layer.visible(scroll.render(true));
+            },
+            back() {
+                onBack && onBack();
+            }
+        });
+
+        Lampa.Controller.toggle('ts-preload-modal');
+
+        return {
+            destroy() {
+                scroll.destroy();
+                html.remove();
+                Lampa.Controller.remove('ts-preload-modal');
+            }
+        };
     }
 
     function closeModal() {
-        if (modal) {
-            modal.destroy();
-            modal = null;
-        }
+        modal?.destroy();
+        modal = null;
     }
 
     /* =========================
        PRELOAD LOGIC
     ========================= */
-
-    let playData = null;
 
     function startPreload(data) {
         const u = parseUrl(data.url);
@@ -130,14 +150,28 @@
         playData = data;
         network = new Lampa.Reguest();
 
-        const html = openModal();
+        const html = $(`
+            <div class="broadcast__text">
+                <div class="js-peer"></div>
+                <div class="js-buff"></div>
+                <div class="js-speed"></div>
+            </div>
+        `);
+
+        modal = openModal(html, cancel);
 
         network.timeout(1800 * 1000);
         network.silent(u.clean + '&preload', play, play);
 
         network.timeout(2000);
+        network.silent(
+            u.base + '/cache',
+            stat,
+            stat,
+            JSON.stringify({ action: 'get', hash: u.args.link })
+        );
 
-        const stat = function (res) {
+        function stat(res) {
             if (!res?.Torrent) return;
 
             const t = res.Torrent;
@@ -156,14 +190,7 @@
                     Lampa.Utils.bytesToSize((t.download_speed || 0) * 8, true)
                 }`
             );
-        };
-
-        network.silent(
-            u.base + '/cache',
-            stat,
-            stat,
-            JSON.stringify({ action: 'get', hash: u.args.link })
-        );
+        }
     }
 
     function cancel() {
@@ -185,10 +212,10 @@
 
     Lampa.Plugin.create({
         id: PLUGIN_ID,
-        version: '1.0.0',
         name: 'TorrServer Preload',
+        version: '1.0.0',
 
-        init: function () {
+        init() {
             originalPlay = Lampa.Player.play;
 
             Lampa.Player.play = function (data) {
@@ -205,7 +232,7 @@
             };
         },
 
-        destroy: function () {
+        destroy() {
             if (originalPlay) {
                 Lampa.Player.play = originalPlay;
             }
