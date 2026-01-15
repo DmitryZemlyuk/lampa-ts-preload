@@ -21,20 +21,22 @@
     });
 
     /* =========================
-       SETTINGS
+       SETTINGS (SAFE)
     ========================= */
 
-    Lampa.SettingsApi.addParam({
-        component: 'checkbox',
-        param: {
-            name: 'ts_preload_enabled',
-            default: true
-        },
-        field: {
-            name: 'Предзагрузка TorrServer',
-            description: 'Показывать окно предзагрузки перед стартом видео'
-        }
-    });
+    if (Lampa.SettingsApi) {
+        Lampa.SettingsApi.addParam({
+            component: 'checkbox',
+            param: {
+                name: 'ts_preload_enabled',
+                default: true
+            },
+            field: {
+                name: 'Предзагрузка TorrServer',
+                description: 'Показывать окно предзагрузки перед стартом видео'
+            }
+        });
+    }
 
     /* =========================
        UTILS
@@ -91,14 +93,8 @@
         const footer = $('<div class="modal__footer"></div>');
 
         [
-            {
-                name: Lampa.Lang.translate('cancel'),
-                action: cancel
-            },
-            {
-                name: Lampa.Lang.translate('player_lauch'),
-                action: play
-            }
+            { name: Lampa.Lang.translate('cancel'), action: cancel },
+            { name: Lampa.Lang.translate('player_lauch'), action: play }
         ].forEach(btn => {
             const el = $('<div class="modal__button selector"></div>');
             el.text(btn.name);
@@ -207,37 +203,44 @@
     }
 
     /* =========================
-       PLUGIN
+       INIT (PLUGIN OR FALLBACK)
     ========================= */
 
-    Lampa.Plugin.create({
-        id: PLUGIN_ID,
-        name: 'TorrServer Preload',
-        version: '1.0.0',
+    function init() {
+        originalPlay = Lampa.Player.play;
 
-        init() {
-            originalPlay = Lampa.Player.play;
+        Lampa.Player.play = function (data) {
+            const enabled =
+                !Lampa.SettingsApi ||
+                Lampa.Storage.field('ts_preload_enabled');
 
-            Lampa.Player.play = function (data) {
-                if (
-                    Lampa.Storage.field('ts_preload_enabled') &&
-                    data?.url &&
-                    tsIP() &&
-                    data.url.includes(tsIP())
-                ) {
-                    startPreload(data);
-                } else {
-                    originalPlay(data);
-                }
-            };
-        },
-
-        destroy() {
-            if (originalPlay) {
-                Lampa.Player.play = originalPlay;
+            if (
+                enabled &&
+                data?.url &&
+                tsIP() &&
+                data.url.includes(tsIP())
+            ) {
+                startPreload(data);
+            } else {
+                originalPlay(data);
             }
-            network?.clear();
-            closeModal();
-        }
-    });
+        };
+    }
+
+    if (Lampa.Plugin?.create) {
+        Lampa.Plugin.create({
+            id: PLUGIN_ID,
+            name: 'TorrServer Preload',
+            version: '1.0.0',
+            init,
+            destroy() {
+                if (originalPlay) Lampa.Player.play = originalPlay;
+                network?.clear();
+                closeModal();
+            }
+        });
+    } else {
+        // старая Lampa — инициализируемся напрямую
+        init();
+    }
 })();
