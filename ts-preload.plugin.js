@@ -61,31 +61,32 @@
 	}
 
 	Modal.prototype.bind = function(where){
-	    where.find('.selector')
-		.on('hover:focus',function(e){
-		    this.last = e.target;
-		    this.scroll.update($(e.target));
-		})
-		.on('hover:enter',function(e){
-		    this.last = e.target;
-		    if(this.active.onSelect) this.active.onSelect($(e.target));
-		})
-	    ;
+    var _this = this;
+
+    where.find('.selector')
+        .on('hover:focus', function(e){
+            _this.last = e.target;
+            _this.scroll.update($(e.target));
+        })
+        .on('hover:enter', function(e){
+            _this.last = e.target;
+            if (_this.active.onSelect) _this.active.onSelect($(e.target));
+        });
 	}
 
 	Modal.prototype.jump = function(tofoward){
-	    var select = this.scroll.render().find('.selector.focus');
+    var select = this.scroll.render().find('.selector.focus');
 
-	    if(tofoward) select = select.nextAll().filter('.selector');
-	    else		 select = select.prevAll().filter('.selector');
+    if (tofoward) select = select.nextAll().filter('.selector');
+    else          select = select.prevAll().filter('.selector');
 
-	    select = select.slice(0,10);
-	    select = select.last();
+    select = select.slice(0, 10).last();
 
-	    if(select.length){
-		Lampa.Controller.collectionFocus(this.select[0],this.scroll.render());
-	    }
+    if (select.length){
+        Lampa.Controller.collectionFocus(select[0], this.scroll.render());
+    }
 	}
+
 
 	Modal.prototype.roll = function(direction){
 	    var select = this.scroll.render().find('.selector');
