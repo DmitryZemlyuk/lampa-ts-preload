@@ -339,6 +339,14 @@
 	    if (data && data.Torrent) {
 		var t = data.Torrent;
 		var p = Math.floor((t.preloaded_bytes || 0) * 100 / (t.preload_size || 1));
+		if (p >= 100 && !focusedOnReady && launchBtn.length) {
+		    focusedOnReady = true;
+		    Lampa.Controller.collectionFocus(
+		        launchBtn[0],
+		        modal.scroll.render()
+		    );
+		}
+
 		peer.html(Lampa.Lang.translate('ts_preload_peers') + ': ' + (t.active_peers || 0) + ' / ' + (t.pending_peers || 0) + ' (' + (t.total_peers || 0) + ') &bull; ' + (t.connected_seeders || 0) + ' - ' + Lampa.Lang.translate('ts_preload_seeds'));
 		buff.html(Lampa.Lang.translate('ts_preload_preload') + ': ' + Lampa.Utils.bytesToSize(t.preloaded_bytes || 0) + ' / ' + Lampa.Utils.bytesToSize(t.preload_size || 0) + ' (' + p + '%)');
 		speed.text(Lampa.Lang.translate('ts_preload_speed') + ': ' + Lampa.Utils.bytesToSize((t.download_speed || 0) * 8, true));
