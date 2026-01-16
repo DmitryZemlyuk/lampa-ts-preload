@@ -286,75 +286,133 @@
 	    arg: arg
 	}
     }
+function preload(data) {
+    var u = parseUrl(data.url);
+    if (!u.arg.link) return lampaPlay(data);
 
-    function preload(data) {
-	var u = parseUrl(data.url);
-	if (!u.arg.link) return lampaPlay(data);
-	player = new Player(data);
-	var controller = Lampa.Controller.enabled().name;
-	var network = new Lampa.Reguest();
-	var modalHtml = $('<div>' + '<div class="broadcast__text" style="text-align: left"><span class="js-peer">&nbsp;</span><br><span class="js-buff">&nbsp;</span><br><span class="js-speed">&nbsp;</span></div>' + '<div class="broadcast__scan"><div></div></div>' + '</div>');
-	var peer = modalHtml.find('.js-peer');
-	var buff = modalHtml.find('.js-buff');
-	var speed = modalHtml.find('.js-speed');
-	var modal = new Modal({
-	    title: Lampa.Lang.translate('loading'),
-	    html: modalHtml,
-	    onBack: cancel,
-	    buttons: [
-		{
-		    name: Lampa.Lang.translate('cancel'),
-		    onSelect: cancel
-		},
-		{
-		    name: Lampa.Lang.translate('player_lauch'),
-		    onSelect: play
-		}
-	    ]
-	});
-	modal.open();
-	function destroy() {
-	    network.clear();
-	    modal.close();
-	    Lampa.Controller.toggle(controller);
-	}
-	function cancel(){
-	    if (player) {
-		destroy();
-		player.callback && player.callback();
-		player = null;
-	    }
-	}
-	function play(){
-	    if (player) {
-		destroy();
-		player.play();
-	    }
-	}
-	network.timeout(1800 * 1000);
-	network.silent(u.clearUrl + '&preload');
-	network.timeout(2000);
-	var stat = function(data) {
-	    if (!player) return;
-	    if (data && data.Torrent) {
-		var t = data.Torrent;
-		var p = Math.floor((t.preloaded_bytes || 0) * 100 / (t.preload_size || 1));
-		if (p >= 100 && !focusedOnReady && launchBtn.length) {
-		    focusedOnReady = true;
-		
-		    Lampa.Controller.collectionFocus(
-		        launchBtn[0],
-		        modal.scroll.render()
-		    );
-		}
+    player = new Player(data);
 
-		peer.html(Lampa.Lang.translate('ts_preload_peers') + ': ' + (t.active_peers || 0) + ' / ' + (t.pending_peers || 0) + ' (' + (t.total_peers || 0) + ') &bull; ' + (t.connected_seeders || 0) + ' - ' + Lampa.Lang.translate('ts_preload_seeds'));
-		buff.html(Lampa.Lang.translate('ts_preload_preload') + ': ' + Lampa.Utils.bytesToSize(t.preloaded_bytes || 0) + ' / ' + Lampa.Utils.bytesToSize(t.preload_size || 0) + ' (' + p + '%)');
-		speed.text(Lampa.Lang.translate('ts_preload_speed') + ': ' + Lampa.Utils.bytesToSize((t.download_speed || 0) * 8, true));
-	    }
-	    // network.silent(u.clearUrl + '&stat', function(t){stat({Torrent: t})}, stat);
-	    network.silent(u.base_url + '/cache', stat, stat, JSON.stringify({action: 'get', hash: u.arg.link}));
-	};
-	stat({Torrent: {active_peers:0,pending_peers:0,total_peers:0,connected_seeders:0,preloaded_bytes:0,preload_size:0,download_speed:0}});
+    var controller = Lampa.Controller.enabled().name;
+    var network = new Lampa.Reguest();
+
+    var modalHtml = $('<div>' +
+        '<div class="broadcast__text" style="text-align: left">' +
+        '<span class="js-peer">&nbsp;</span><br>' +
+        '<span class="js-buff">&nbsp;</span><br>' +
+        '<span class="js-speed">&nbsp;</span>' +
+        '</div>' +
+        '<div class="broadcast__scan"><div></div></div>' +
+    '</div>');
+
+    var peer  = modalHtml.find('.js-peer');
+    var buff  = modalHtml.find('.js-buff');
+    var speed = modalHtml.find('.js-speed');
+
+    var modal = new Modal({
+        title: Lampa.Lang.translate('loading'),
+        html: modalHtml,
+        onBack: cancel,
+        buttons: [
+            {
+                name: Lampa.Lang.translate('cancel'),
+                onSelect: cancel
+            },
+            {
+                name: Lampa.Lang.translate('player_lauch'),
+                onSelect: play
+            }
+        ]
+    });
+
+    modal.open();
+
+    var launchBtn = modal.render()
+        .find('.modal__button')
+        .filter(function(){
+            return $(this).text() === Lampa.Lang.translate('player_lauch');
+        });
+
+    var focusedOnReady = false;
+
+    /* =============================================================== */
+
+    function destroy() {
+        network.clear();
+        modal.close();
+        Lampa.Controller.toggle(controller);
     }
+
+    function cancel(){
+        if (player) {
+            destroy();
+            player.callback && player.callback();
+            player = null;
+        }
+    }
+
+    function play(){
+        if (player) {
+            destroy();
+            player.play();
+        }
+    }
+
+    network.timeout(1800 * 1000);
+    network.silent(u.clearUrl + '&preload');
+    network.timeout(2000);
+
+    var stat = function(data) {
+        if (!player) return;
+
+        if (data && data.Torrent) {
+            var t = data.Torrent;
+            var p = Math.floor((t.preloaded_bytes || 0) * 100 / (t.preload_size || 1));
+
+            peer.html(
+                Lampa.Lang.translate('ts_preload_peers') + ': ' +
+                (t.active_peers || 0) + ' / ' +
+                (t.pending_peers || 0)
+            );
+
+            buff.html(
+                Lampa.Lang.translate('ts_preload_preload') + ': ' +
+                Lampa.Utils.bytesToSize(t.preloaded_bytes || 0) + ' / ' +
+                Lampa.Utils.bytesToSize(t.preload_size || 0) +
+                ' (' + p + '%)'
+            );
+
+            speed.text(
+                Lampa.Lang.translate('ts_preload_speed') + ': ' +
+                Lampa.Utils.bytesToSize((t.download_speed || 0) * 8, true)
+            );
+
+            if (p >= 100 && !focusedOnReady && launchBtn.length) {
+                focusedOnReady = true;
+
+                Lampa.Controller.collectionFocus(
+                    launchBtn[0],
+                    modal.scroll.render()
+                );
+            }
+        }
+
+        network.silent(
+            u.base_url + '/cache',
+            stat,
+            stat,
+            JSON.stringify({ action: 'get', hash: u.arg.link })
+        );
+    };
+
+    stat({ Torrent: {
+        active_peers:0,
+        pending_peers:0,
+        total_peers:0,
+        connected_seeders:0,
+        preloaded_bytes:0,
+        preload_size:0,
+        download_speed:0
+    }});
+}
+
 })(jQuery, Lampa);
