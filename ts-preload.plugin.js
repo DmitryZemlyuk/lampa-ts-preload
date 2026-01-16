@@ -341,6 +341,7 @@
 		var p = Math.floor((t.preloaded_bytes || 0) * 100 / (t.preload_size || 1));
 		if (p >= 100 && !focusedOnReady && launchBtn.length) {
 		    focusedOnReady = true;
+		
 		    Lampa.Controller.collectionFocus(
 		        launchBtn[0],
 		        modal.scroll.render()
