@@ -331,8 +331,8 @@
 		player.play();
 	    }
 	}
-	network.timeout(1800 * 1000); /* 30 минут на предзагрузку (для особо упоротых :D) */
-	network.silent(u.clearUrl + '&preload', play, play);
+	network.timeout(1800 * 1000);
+	network.silent(u.clearUrl + '&preload');
 	network.timeout(2000);
 	var stat = function(data) {
 	    if (!player) return;
