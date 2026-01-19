@@ -197,13 +197,13 @@
 	}
     });
     function tsIP(){
-	// Для поддержки верссии 1.6.5
+
 	return (!!Lampa.Torserver && !!Lampa.Torserver.ip)
 	    ? Lampa.Torserver.ip()
 	    : Lampa.Storage.get(Lampa.Storage.field('torrserver_use_link') === 'two' ? 'torrserver_url_two' : 'torrserver_url');
     }
     if (!!Lampa.Torserver && !!Lampa.Torserver.stream && !!Lampa.Torserver.url) {
-	// Для отключения ламповой предзагрузки, формируем ссылку без &preload
+
 	Lampa.Torserver.stream = function(path, hash, id) {
 	    return Lampa.Torserver.url() + '/stream/'+ encodeURIComponent(path.split('\\').pop().split('/').pop()) +'?link=' + hash + '&index=' + id + '&play'
 	}
@@ -254,11 +254,11 @@
 	    && data.url
 	    && tsIP()
 	    && data.url.indexOf(tsIP()) > -1
-	    && ( /* Установлена опция плеера "Начать с начала" или таймкод меньше минуты */
+	    && ( 
 		Lampa.Storage.field('player_timecode') === 'again'
 		|| !data.timeline || !data.timeline.time
 		|| parseFloat('0' + data.timeline.time) < 60
-		|| true // nikk говорит включать, если что есть кнопка запуска плеера (возможно нужна опция)
+		|| true 
 	    )
 	) preload(data);
 	else lampaPlay(data);
